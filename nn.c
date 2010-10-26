@@ -163,6 +163,10 @@ double learn() {
     for (j = 0; j < nnData.errorsSize; j++) {
       printf("%f\n", nnData.errors[j]);
     }
+    printf("momentums:\n");
+    for (j = 0; j < nnData.weightsSize; j++) {
+      printf("%f\n", nnData.momentums[j]);
+    }
     printf("weights:\n");
     for (j = 0; j < nnData.weightsSize; j++) {
       printf("%f\n", nnData.weights[j]);
