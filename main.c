@@ -105,7 +105,7 @@ static void checkProgramError(GLuint shader) {
 static void idle() {
 #ifndef TURBO
   // if we aren't in turbo mode, learn once per redraw
-  learn();
+  printf("%f\n", learn());
 #endif
   glUseProgram(glData.quadProgram);
   glUniform1fv(glData.weightsUniform, nnData.weightsSize, nnData.weights);
