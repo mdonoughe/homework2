@@ -88,6 +88,12 @@ static double activate_log(double x) {
   return 2.0 / (1.0 + exp(-x)) - 1.0;
 }
 
+static double activate_step(double x) {
+  if (x < 0.0)
+    return -1.0;
+  return 1.0;
+}
+
 static double derive_htan(double x) {
   if (x > 84.0 || x < -84.0)
     return 0.0;
@@ -101,6 +107,10 @@ static double derive_log(double x) {
   if (x > 84.0 || x < -84.0)
     return 0.0;
   return 2.0 / ((1.0 + exp(-x)) * (1.0 + exp(x)));
+}
+
+static double derive_step(double x) {
+  return 1.0;
 }
 
 double learn() {
@@ -214,21 +224,6 @@ void initNN(int *argc, char **argv) {
     readTrainingSet("spiral.dat");
   }
 
-  // setting nnData.function changes the function used by the shader too!
-  nnData.function = ACTIVATION_HYPERBOLIC_TANGENT;
-  //nnData.function = ACTIVATION_LOGISTIC;
-  // but for the C code we'll just use a virtual function call to save cycles
-  switch (nnData.function) {
-    case ACTIVATION_HYPERBOLIC_TANGENT:
-      nnData.activate = &activate_htan;
-      nnData.derive = &derive_htan;
-      break;
-    case ACTIVATION_LOGISTIC:
-      nnData.activate = &activate_log;
-      nnData.derive = &derive_log;
-      break;
-  }
-
   nnData.momentum = 0.9;
   nnData.learnRate = 0.01;
   nnData.epoch = 0;
@@ -261,6 +256,27 @@ void initNN(int *argc, char **argv) {
 
   // set argc to 1 because we consumed all the arguments
   *argc = 1;
+
+  // setting nnData.function changes the function used by the shader too!
+  nnData.function = ACTIVATION_HYPERBOLIC_TANGENT;
+  //nnData.function = ACTIVATION_LOGISTIC;
+  // we don't want to use activation for a single perceptron
+  if (nnData.layers == 2)
+    nnData.function = ACTIVATION_STEP;
+  // but for the C code we'll just use a virtual function call to save cycles
+  switch (nnData.function) {
+    case ACTIVATION_HYPERBOLIC_TANGENT:
+      nnData.activate = &activate_htan;
+      nnData.derive = &derive_htan;
+      break;
+    case ACTIVATION_LOGISTIC:
+      nnData.activate = &activate_log;
+      nnData.derive = &derive_log;
+      break;
+    case ACTIVATION_STEP:
+      nnData.activate = &activate_step;
+      nnData.derive = &derive_step;
+  }
 
   // allocate our arrays
   nnData.weights = malloc(nnData.weightsSize * sizeof(GLfloat));

@@ -20,6 +20,12 @@ static const char *logisticActivation = "\
         }\
 ";
 
+static const char *stepActivation = "\
+        float activate(float x) {\n\
+          return step(0.0, x) * 2.0 - 1.0;\n\
+        }\
+";
+
 static const char *fragmentShader = "\
         #version 120\n\
         #extension GL_EXT_bindable_uniform : require\n\
@@ -111,6 +117,8 @@ static const char *activation() {
       return htanActivation;
     case ACTIVATION_LOGISTIC:
       return logisticActivation;
+    case ACTIVATION_STEP:
+      return stepActivation;
     default:
       return "Unknown activation function!";
   }
