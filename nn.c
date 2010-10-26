@@ -87,7 +87,12 @@ static double derive_log(double x) {
 double learn() {
   double mse = 0.0;
   int i, j, k, l;
+#ifdef SLOW
+  i = nnData.epoch % nnData.inputsSize;
+  {
+#else
   for (i = 0; i < nnData.inputsSize; i++) {
+#endif
     // clear values
     bzero(nnData.preActivates, nnData.preActivatesSize * sizeof(double));
     // clear errors
@@ -165,7 +170,11 @@ double learn() {
 #endif
   }
   nnData.epoch++;
+#ifdef SLOW
+  return mse;
+#else
   return mse / nnData.inputsSize;
+#endif
 }
 
 void initNN(int *argc, char **argv) {
