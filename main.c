@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
   // create window
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
-  glutInitWindowSize(1024, 768);
+  glutInitWindowSize(512, 512);
   glutCreateWindow("Homework 2");
 
   // initialize network
