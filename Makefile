@@ -1,4 +1,4 @@
-CFLAGS = -Wall -g
+CFLAGS = -Wall -g -O3 -DTURBO
 LDFLAGS = -framework OpenGL -framework GLUT
 
 main: main.o shaderbuilder.o nn.o
