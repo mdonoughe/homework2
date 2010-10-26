@@ -224,8 +224,8 @@ void initNN(int *argc, char **argv) {
     readTrainingSet("spiral.dat");
   }
 
-  nnData.momentum = 0.9;
-  nnData.learnRate = 0.01;
+  nnData.momentum = 0.95;
+  nnData.learnRate = 0.0001;
   nnData.epoch = 0;
 
   // the number of hidden layers is specified on the command line
