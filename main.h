@@ -94,6 +94,8 @@ typedef struct NNData {
   unsigned int inputsSize;
   // all input vectors
   InputVector *inputs;
+  // a randomized list of input vectors
+  InputVector **shuffledInputs;
 
   // factors
   double learnRate;

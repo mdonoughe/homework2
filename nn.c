@@ -23,6 +23,18 @@ static void addInput(double x, double y, int target, Input ***eoInputs) {
   *eoInputs = &input->next;
 }
 
+static void shuffle() {
+  int i;
+  for (i = 0; i < nnData.inputsSize - 1; i++) {
+    // pick a number between i and the end of the list
+    int offset = i + random() % (nnData.inputsSize - i);
+    // swap the current index and the random one
+    InputVector *iv = nnData.shuffledInputs[i];
+    nnData.shuffledInputs[i] = nnData.shuffledInputs[offset];
+    nnData.shuffledInputs[offset] = iv;
+  }
+}
+
 static void readTrainingSet(char *file) {
   // open file
   FILE *f = fopen(file, "r");
@@ -48,6 +60,13 @@ static void readTrainingSet(char *file) {
     Input *next = inputs->next;
     free(inputs);
     inputs = next;
+  }
+  // copy the list into the shuffled list
+  // this is in order but will be shuffled on the first learn
+  nnData.shuffledInputs = malloc(sizeof(InputVector *) * count);
+  int i;
+  for (i = 0; i < count; i++) {
+    nnData.shuffledInputs[i] = nnData.inputs + i;
   }
 }
 
@@ -93,13 +112,15 @@ double learn() {
 #else
   for (i = 0; i < nnData.inputsSize; i++) {
 #endif
+    if (i == 0)
+      shuffle();
     // clear values
     bzero(nnData.preActivates, nnData.preActivatesSize * sizeof(double));
     // clear errors
     bzero(nnData.errors, nnData.errorsSize * sizeof(double));
     // input values
-    nnData.values[1] = nnData.inputs[i].x;
-    nnData.values[2] = nnData.inputs[i].y;
+    nnData.values[1] = nnData.shuffledInputs[i]->x;
+    nnData.values[2] = nnData.shuffledInputs[i]->y;
 
     // find outputs - forward
     // myWeights points to the weights for the current set of inputs and output
@@ -117,7 +138,7 @@ double learn() {
     }
 
     // find the errors - backward
-    nnData.errors[nnData.errorsSize - 1] = nnData.inputs[i].target - nnData.values[nnData.valuesSize - 1];
+    nnData.errors[nnData.errorsSize - 1] = nnData.shuffledInputs[i]->target - nnData.values[nnData.valuesSize - 1];
     for (j = nnData.layers - 2; j > 0; j--) {
       // myWeights here goes something like 6 7 3 4 5 1 2
       // jump backwards here
