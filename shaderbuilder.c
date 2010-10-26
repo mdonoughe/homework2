@@ -70,7 +70,7 @@ void addPart(char *text, int len, Part ***eoParts) {
 }
 
 static int createEQ(char **ret) {
-  int len;
+  int len = 0;
   int i;
   int j;
   int k;
