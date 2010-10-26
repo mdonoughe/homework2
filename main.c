@@ -105,7 +105,8 @@ static void checkProgramError(GLuint shader) {
 static void idle() {
 #ifndef TURBO
   // if we aren't in turbo mode, learn once per redraw
-  printf("%f\n", learn());
+  double mse = learn();
+  printf("%d\t%f\n", nnData.epoch, mse);
 #endif
   glUseProgram(glData.quadProgram);
   glUniform1fv(glData.weightsUniform, nnData.weightsSize, nnData.weights);
@@ -116,8 +117,10 @@ static void idle() {
 // in turbo mode we learn as fast as possible
 // this is not thread safe, but the display just gets a little weird at worst
 static void *learnStuff(void *v) {
-  while(1)
-    learn();
+  while(1) {
+    double mse = learn();
+    printf("%d\t%f\n", nnData.epoch, mse);
+  }
   return NULL;
 }
 #endif
