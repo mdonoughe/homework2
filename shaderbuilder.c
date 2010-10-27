@@ -20,6 +20,12 @@ static const char *logisticActivation = "\
         }\
 ";
 
+static const char *linearActivation = "\
+        float activate(float x) {\n\
+          return x;\n\
+        }\
+";
+
 static const char *stepActivation = "\
         float activate(float x) {\n\
           return step(0.0, x) * 2.0 - 1.0;\n\
@@ -136,6 +142,8 @@ static const char *activation() {
       return logisticActivation;
     case ACTIVATION_STEP:
       return stepActivation;
+    case ACTIVATION_LINEAR:
+      return linearActivation;
     default:
       return "Unknown activation function!";
   }

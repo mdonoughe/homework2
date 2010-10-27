@@ -3,7 +3,8 @@
 typedef enum ActivationFunction {
   ACTIVATION_HYPERBOLIC_TANGENT,
   ACTIVATION_LOGISTIC,
-  ACTIVATION_STEP
+  ACTIVATION_STEP,
+  ACTIVATION_LINEAR
 } ActivationFunction;
 
 typedef struct GLData {

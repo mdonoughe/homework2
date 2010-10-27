@@ -94,6 +94,10 @@ static double activate_step(double x) {
   return 1.0;
 }
 
+static double activate_linear(double x) {
+  return x;
+}
+
 static double derive_htan(double x) {
   if (x > 84.0 || x < -84.0)
     return 0.0;
@@ -110,6 +114,10 @@ static double derive_log(double x) {
 }
 
 static double derive_step(double x) {
+  return 1.0;
+}
+
+static double derive_linear(double x) {
   return 1.0;
 }
 
@@ -341,7 +349,7 @@ void initNN(int *argc, char **argv) {
   //nnData.function = ACTIVATION_LOGISTIC;
   // we don't want to use activation for a single perceptron
   if (nnData.layers - (nnData.isRBF ? 1 : 0) == 2)
-    nnData.function = ACTIVATION_STEP;
+    nnData.function = ACTIVATION_LINEAR;
   // but for the C code we'll just use a virtual function call to save cycles
   switch (nnData.function) {
     case ACTIVATION_HYPERBOLIC_TANGENT:
@@ -355,6 +363,9 @@ void initNN(int *argc, char **argv) {
     case ACTIVATION_STEP:
       nnData.activate = &activate_step;
       nnData.derive = &derive_step;
+    case ACTIVATION_LINEAR:
+      nnData.activate = &activate_linear;
+      nnData.derive = &derive_linear;
   }
 
   // allocate our arrays
