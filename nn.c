@@ -132,10 +132,19 @@ double learn() {
     nnData.values[1] = nnData.shuffledInputs[i]->x;
     nnData.values[2] = nnData.shuffledInputs[i]->y;
 
+    unsigned int startLayer = 1;
+    if (nnData.isRBF) {
+      startLayer++;
+      int stride = nnData.layerSizes[0] + 1;
+      for (k = 0; k < nnData.layerSizes[1]; k++) {
+        nnData.layerValues[1][k + 1] = exp(-(pow(nnData.layerValues[0][1] - nnData.weights[stride * k], 2) + pow(nnData.layerValues[0][2] - nnData.weights[stride * k + 1], 2)) / (2 * nnData.weights[stride * k + 2]));
+      }
+    }
+
     // find outputs - forward
     // myWeights points to the weights for the current set of inputs and output
-    GLfloat *myWeights = nnData.weights;
-    for (j = 1; j < nnData.layers; j++) {
+    GLfloat *myWeights = nnData.layerWeights[startLayer - 1];
+    for (j = startLayer; j < nnData.layers; j++) {
       for (k = 0; k < nnData.layerSizes[j]; k++) {
         for (l = 0; l < nnData.layerSizes[j - 1] + 1; l++) {
           nnData.layerPreActivates[j][k] += myWeights[l] * nnData.layerValues[j - 1][l];
@@ -149,7 +158,7 @@ double learn() {
 
     // find the errors - backward
     nnData.errors[nnData.errorsSize - 1] = nnData.shuffledInputs[i]->target - nnData.values[nnData.valuesSize - 1];
-    for (j = nnData.layers - 2; j > 0; j--) {
+    for (j = nnData.layers - 2; j >= startLayer; j--) {
       // myWeights here goes something like 6 7 3 4 5 1 2
       // jump backwards here
       myWeights = nnData.layerWeights[j];
@@ -165,9 +174,9 @@ double learn() {
 
     // learn - forward
     // myMomentums and myWeights are the same idea
-    myWeights = nnData.weights;
-    double *myMomentums = nnData.momentums;
-    for (j = 1; j < nnData.layers; j++) {
+    myWeights = nnData.layerWeights[startLayer - 1];
+    double *myMomentums = nnData.layerMomentums[startLayer - 1];
+    for (j = startLayer; j < nnData.layers; j++) {
       for (k = 0; k < nnData.layerSizes[j]; k++) {
         double delta = nnData.derive(nnData.layerPreActivates[j][k]) * nnData.layerErrors[j][k] * nnData.learnRate;
         for (l = 0; l < nnData.layerSizes[j - 1] + 1; l++) {
@@ -212,6 +221,68 @@ double learn() {
 #endif
 }
 
+static void cluster() {
+  shuffle();
+  int i;
+  int j;
+  int stride = nnData.layerSizes[0] + 1;
+  int *assignments = malloc(nnData.inputsSize * sizeof(int));
+  int *oldAssignments = malloc(nnData.inputsSize * sizeof(int));
+  bzero(oldAssignments, nnData.inputsSize * sizeof(int));
+  double *newMeans = malloc(nnData.layerSizes[0] * nnData.layerSizes[1] * sizeof(double));
+  unsigned int *assigned = malloc(nnData.layerSizes[1] * sizeof(unsigned int));
+  char done = 0;
+  // randomly select starting points
+  for (i = 0; i < nnData.layerSizes[1]; i++) {
+    nnData.weights[i * stride] = nnData.shuffledInputs[i]->x;
+    nnData.weights[i * stride + 1] = nnData.shuffledInputs[i]->y;
+    // init variance
+    nnData.weights[i * stride + 2] = 0.0;
+  }
+  // organize into clusters
+  while (!done) {
+    done = 1;
+    bzero(newMeans, nnData.layerSizes[0] * nnData.layerSizes[1] * sizeof(double));
+    bzero(assigned, nnData.layerSizes[1] * sizeof(unsigned int));
+    bzero(assignments, nnData.inputsSize * sizeof(int));
+    for (i = 0; i < nnData.inputsSize; i++) {
+      double distance = hypot(nnData.inputs[i].x - nnData.weights[0], nnData.inputs[i].y - nnData.weights[1]);
+      for (j = 1; j < nnData.layerSizes[1]; j++) {
+        double ndistance = hypot(nnData.inputs[i].x - nnData.weights[j * stride], nnData.inputs[i].y - nnData.weights[j * stride + 1]);
+        if (ndistance < distance) {
+          assignments[i] = j;
+          distance = ndistance;
+        }
+      }
+      done &= oldAssignments[i] == assignments[i];
+      newMeans[nnData.layerSizes[0] * assignments[i]] += nnData.inputs[i].x;
+      newMeans[nnData.layerSizes[0] * assignments[i] + 1] += nnData.inputs[i].y;
+      assigned[assignments[i]]++;
+    }
+    for (i = 0; i < nnData.layerSizes[1]; i++) {
+      for (j = 0; j < nnData.layerSizes[0]; j++) {
+        nnData.weights[i * stride + j] = newMeans[i * nnData.layerSizes[0] + j] / assigned[i];
+      }
+    }
+    if (!done) {
+      memcpy(oldAssignments, assignments, nnData.inputsSize * sizeof(int));
+    }
+  }
+  // find variance
+  for (i = 0; i < nnData.inputsSize; i++) {
+    nnData.weights[assignments[i] * stride + 2] += pow(nnData.inputs[i].x - nnData.weights[assignments[i] * stride], 2) + pow(nnData.inputs[i].y - nnData.weights[assignments[i] * stride + 1], 2);
+  }
+  for (i = 0; i < nnData.layerSizes[1]; i++) {
+    nnData.weights[i * stride + 2] /= assigned[i];
+    nnData.weights[i * stride + 2] += 0.01;
+  }
+  // free memory
+  free(newMeans);
+  free(oldAssignments);
+  free(assignments);
+  free(assigned);
+}
+
 void initNN(int *argc, char **argv) {
   // read data file
   if (*argc > 2 && strcmp(argv[1], "-f") == 0) {
@@ -227,6 +298,7 @@ void initNN(int *argc, char **argv) {
   nnData.momentum = 0.95;
   nnData.learnRate = 0.0001;
   nnData.epoch = 0;
+  nnData.isRBF = 1;
 
   // the number of hidden layers is specified on the command line
   // main 5 5 produces a network 2 5 5 1
@@ -253,6 +325,13 @@ void initNN(int *argc, char **argv) {
   // the output layer is not handled by the loop
   nnData.layerSizes[i] = 1;
   nnData.weightsSize += (1 + nnData.layerSizes[i - 1]) * 1;
+  // these are part of the second layer, but extra RBF stuff
+  if (nnData.isRBF) {
+    // we'll let the input layer keep its bias, even though it's unused
+    // no preactivates or errors for the RBF layer
+    nnData.preActivatesSize -= nnData.layerSizes[1];
+    nnData.errorsSize -= nnData.layerSizes[1];
+  }
 
   // set argc to 1 because we consumed all the arguments
   *argc = 1;
@@ -261,7 +340,7 @@ void initNN(int *argc, char **argv) {
   nnData.function = ACTIVATION_HYPERBOLIC_TANGENT;
   //nnData.function = ACTIVATION_LOGISTIC;
   // we don't want to use activation for a single perceptron
-  if (nnData.layers == 2)
+  if (nnData.layers - (nnData.isRBF ? 1 : 0) == 2)
     nnData.function = ACTIVATION_STEP;
   // but for the C code we'll just use a virtual function call to save cycles
   switch (nnData.function) {
@@ -299,6 +378,10 @@ void initNN(int *argc, char **argv) {
   // they need populated because the other layers are offsets from the first
   nnData.layerPreActivates[0] = nnData.preActivates - nnData.layerSizes[0];
   nnData.layerErrors[0] = nnData.errors - nnData.layerSizes[0];
+  if (nnData.isRBF) {
+    nnData.layerPreActivates[0] -= nnData.layerSizes[1];
+    nnData.layerErrors[0] -= nnData.layerSizes[1];
+  }
   for (i = 1; i < nnData.layers; i++) {
     nnData.layerWeights[i] = nnData.layerWeights[i - 1] + (nnData.layerSizes[i - 1] + 1) * nnData.layerSizes[i];
     nnData.layerMomentums[i] = nnData.layerMomentums[i - 1] + (nnData.layerSizes[i - 1] + 1) * nnData.layerSizes[i];
@@ -309,6 +392,10 @@ void initNN(int *argc, char **argv) {
   // change the bogus values to nulls
   nnData.layerPreActivates[0] = NULL;
   nnData.layerErrors[0] = NULL;
+  if (nnData.isRBF) {
+    nnData.layerPreActivates[1] = NULL;
+    nnData.layerErrors[1] = NULL;
+  }
 
   // initialize weights
   for (i = 0; i < nnData.weightsSize; i++) {
@@ -319,5 +406,8 @@ void initNN(int *argc, char **argv) {
   // initialize biases
   for (i = 0; i < nnData.layers; i++) {
     nnData.layerValues[i][0] = 1.0;
+  }
+  if (nnData.isRBF) {
+    cluster();
   }
 }

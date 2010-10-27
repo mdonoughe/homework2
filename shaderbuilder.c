@@ -26,6 +26,12 @@ static const char *stepActivation = "\
         }\
 ";
 
+static const char *gaussian = "\
+        float rbf(vec2 x, vec2 mean, float var) {\n\
+          return exp(-(pow(x.x - mean.x, 2) + pow(x.y - mean.y, 2)) / (2 * var));\n\
+        }\
+";
+
 static const char *fragmentShader = "\
         #version 120\n\
         #extension GL_EXT_bindable_uniform : require\n\
@@ -33,6 +39,8 @@ static const char *fragmentShader = "\
         uniform vec2 halfStep;\n\
         bindable uniform float weights[%d];\n\
         varying vec2 ftexcoord;\n\
+        \n\
+%s\n\
         \n\
 %s\n\
         \n\
@@ -79,9 +87,18 @@ static int createEQ(char **ret) {
   Part *parts;
   Part **eoParts = &parts;
   int weightIndex = 0;
-  for (i = 1; i < nnData.layers; i++) {
+  int starti = 1;
+  char *dest;
+  if (nnData.isRBF) {
+    starti++;
+    for (j = 0; j < nnData.layerSizes[1]; j++) {
+      len += lastlen = asprintf(&dest, "          float v0001%04x = rbf(vec2(v00000000, v00000001), vec2(weights[%d], weights[%d]), weights[%d]);\n", j, weightIndex, weightIndex + 1, weightIndex + 2);
+      weightIndex += 3;
+      addPart(dest, lastlen, &eoParts);
+    }
+  }
+  for (i = starti; i < nnData.layers; i++) {
     for (j = 0; j < nnData.layerSizes[i]; j++) {
-      char *dest;
       if (i == nnData.layers - 1)
         len += lastlen = asprintf(&dest, "          float val = activate(weights[%d]", weightIndex++);
       else
@@ -128,7 +145,7 @@ int createFShader(char **ret) {
   int retLen;
   char *eq;
   createEQ(&eq);
-  retLen = asprintf(ret, fragmentShader, nnData.weightsSize, activation(), eq);
+  retLen = asprintf(ret, fragmentShader, nnData.weightsSize, activation(), gaussian, eq);
   free(eq);
   printf("%s", *ret);
   return retLen;

@@ -34,13 +34,15 @@ typedef struct InputVector {
 typedef struct NNData {
   // number of weights
   unsigned int weightsSize;
-  // all weights arranged as follows
+  // for an mlp all weights arranged as follows
   // layer 0: (no weights because it's the input layer)
   // layer 1: (if it has two nodes)
   // bias, x, y
   // bias, x, y
   // layer 2: (if it has one node)
   // bias, layer1-0, layer1-1
+  // for an rbf layer 1 looks like
+  // meanx, meany, var, meanx, meany, var
   // GLfloat because this is shipped into OpenGL
   GLfloat *weights;
   // number of values(one for every node, and a bias for every layer)
@@ -61,6 +63,7 @@ typedef struct NNData {
   // layer1-0, layer1-1
   // layer 2:
   // layer2-0
+  // layer 1 is left out in an rbf
   double *preActivates;
   // number of errors
   unsigned int errorsSize;
@@ -70,6 +73,7 @@ typedef struct NNData {
   // layer1-0, layer1-1
   // layer 2:
   // layer2-0
+  // layer 1 is left out in an rbf
   double *errors;
   // all momentums arranged as follows
   // layer 0: (no weights because it's the input layer)
@@ -78,6 +82,7 @@ typedef struct NNData {
   // bias, x, y
   // layer 2: (if it has one node)
   // bias, layer1-0, layer1-1
+  // layer 1 is unused in an rbf
   double *momentums;
   // number of layers
   unsigned int layers;
@@ -111,6 +116,8 @@ typedef struct NNData {
 
   // the number of times learn has been called
   unsigned int epoch;
+
+  unsigned char isRBF;
 } NNData;
 
 extern GLData glData;
