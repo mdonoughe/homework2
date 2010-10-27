@@ -392,6 +392,7 @@ void initNN(int *argc, char **argv) {
   // change the bogus values to nulls
   nnData.layerPreActivates[0] = NULL;
   nnData.layerErrors[0] = NULL;
+  nnData.layerWeights[nnData.layers - 1] = NULL;
   if (nnData.isRBF) {
     nnData.layerPreActivates[1] = NULL;
     nnData.layerErrors[1] = NULL;
