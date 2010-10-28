@@ -123,6 +123,13 @@ static void *learnStuff(void *v) {
   }
   return NULL;
 }
+
+static void turboDisplay() {
+  display();
+  glutDisplayFunc(&display);
+  pthread_t thread;
+  pthread_create(&thread, NULL, &learnStuff, NULL);
+}
 #endif
 
 int main(int argc, char **argv) {
@@ -232,13 +239,13 @@ int main(int argc, char **argv) {
   }
 
   glutReshapeFunc(&reshape);
+#ifdef TURBO
+  glutDisplayFunc(&turboDisplay);
+#else
   glutDisplayFunc(&display);
+#endif
   glutIdleFunc(&idle);
   glutReportErrors();
-#ifdef TURBO
-  pthread_t thread;
-  pthread_create(&thread, NULL, &learnStuff, NULL);
-#endif
   glutMainLoop();
   return 0;
 }
