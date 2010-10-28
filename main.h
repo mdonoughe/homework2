@@ -1,4 +1,12 @@
+#ifdef __APPLE__
 #include <OpenGL/gl.h>
+#else
+#include <GL/gl.h>
+#endif
+
+#ifdef __WIN32__
+#define bzero(a, b) memset((a), 0, (b))
+#endif
 
 typedef enum ActivationFunction {
   ACTIVATION_HYPERBOLIC_TANGENT,
