@@ -308,7 +308,7 @@ static void cluster() {
 
 void initNN(int *argc, char **argv) {
   // read data file
-  if (*argc > 2 && strcmp(argv[1], "-f") == 0) {
+  if (*argc > 2 && !strcmp(argv[1], "-f")) {
     // we got a file from the command line
     readTrainingSet(argv[2]);
     // remove this part of the command line so it isn't processed later
@@ -321,7 +321,13 @@ void initNN(int *argc, char **argv) {
   nnData.momentum = 0.95;
   nnData.learnRate = 0.0001;
   nnData.epoch = 0;
-  nnData.isRBF = 1;
+  nnData.isRBF = 0;
+
+  if (*argc > 1 && !strcmp(argv[1], "-r")) {
+    nnData.isRBF = 1;
+    memmove(argv + 1, argv + 2, (*argc - 2) * sizeof(char *));
+    (*argc) -= 1;
+  }
 
   // the number of hidden layers is specified on the command line
   // main 5 5 produces a network 2 5 5 1
