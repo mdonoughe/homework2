@@ -199,7 +199,7 @@ double learn() {
       }
     }
     // add error to total
-    mse += 0.5 * pow(nnData.errors[nnData.errorsSize - 1], 2);
+    mse += 0.25 * pow(nnData.errors[nnData.errorsSize - 1], 2);
 #if 0
     // print tons of information
     // will slow things down a lot
