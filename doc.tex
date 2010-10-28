@@ -1,0 +1,14 @@
+\documentclass[11pt]{article}
+\usepackage{geometry}
+\geometry{letterpaper}
+\usepackage[in]{fullpage}
+\usepackage{times}
+\usepackage{url}
+
+\begin{document}
+This time I wrote a fast neural network in C and GLSL.
+
+The C code runs the neural network on the test set and learns. Inputs are presented in random order. The learn rate is 0.0001. There is a momentum term that starts at 0.95 and adjusts between 0.5 and 0.99 using the method described by Kun-Long Ho, Yuan-Yih Hsu, and Chien-Chuen Yang in ``Short Term Load Forecasting Using a Multilayer Neural Network with an Adaptive Learning Algorithm''(\url{http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=141697}).
+
+The C code also generates some GLSL code that runs the network on the GPU. Every pixel is classified and colorized four times, and the average is used for the final color value. This provides a somewhat real-time preview of the network as it learns.
+\end{document}
