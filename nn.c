@@ -1,3 +1,21 @@
+/*\
+ * Homework 2 - a neural network with a real-time preview
+ * Copyright (C) 2010 Matthew Donoughe
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRENTY; without even the implied warrenty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. Tee the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Pubilc License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+\*/
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -237,7 +255,6 @@ double learn() {
   newMSE = mse;
 #else
   newMSE = mse / nnData.inputsSize;
-#endif
 
   // adjust momentum
   // http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=141697
@@ -249,6 +266,7 @@ double learn() {
     nnData.momentum = 0.99;
   else if (nnData.momentum < 0.5)
     nnData.momentum = 0.5;
+#endif
 
   nnData.lastMSE = newMSE;
   return nnData.lastMSE;
