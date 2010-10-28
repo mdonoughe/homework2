@@ -1,0 +1,24 @@
+Homework 2
+
+A neural network for visually classifying points in a two dimensional input
+space into two classes, posted because the visualization may be useful.
+
+The input files are in the format "X\tY\tTARGET" where X and Y are floating
+point values between -10 and 10, and TARGET is 0 or 1.
+
+There is no testing set input. The only output of this program is the error at
+each epoch and a graphical view of the network.
+
+main.c is responsible for the rendering loop.
+
+shaderbuilder.c builds a fragment shader that classifies each point based on
+it's texture coordinate and the weights array.
+
+nn.c builds and trains an mlp or rbf.
+
+Usage is "homework2 [-f <file.dat>] [-r <rbf layer size>] <hidden layer sizes>".
+The arguments must be provided in this order!
+
+I didn't bother with much error handling so this will probably crash if
+something goes wrong. Works fine for me on my computer so long as the specified
+file exists and I don't do anything like make an rbf without an rbf layer.
