@@ -3,6 +3,8 @@ Homework 2
 A neural network for visually classifying points in a two dimensional input
 space into two classes, posted because the visualization may be useful.
 
+A precompiled version is available in the downloads section.
+
 The input files are in the format "X\tY\tTARGET" where X and Y are floating
 point values between -10 and 10, and TARGET is 0 or 1.
 
