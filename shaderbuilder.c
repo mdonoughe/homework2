@@ -5,6 +5,18 @@
 #include "main.h"
 #include "shaderbuilder.h"
 
+#ifdef __WIN32__
+static int asprintf(char **ret, const char *format, ...) {
+    va_list args;
+    int retsize;
+    va_start(args, format);
+    retsize = _vscprintf(format, args);
+    *ret = (char *)malloc((retsize + 1) * sizeof(char));
+    vsprintf_s(*ret, retsize + 1, format, args);
+    return retsize;
+}
+#endif
+
 static const char *htanActivation = "\
         float activate(float x) {\n\
           x = clamp(x, -42.0, 42.0);\n\
@@ -41,8 +53,8 @@ static const char *gaussian = "\
 static const char *fragmentShader = "\
         #version 120\n\
         #extension GL_EXT_bindable_uniform : require\n\
-        uniform vec2 step;\n\
-        uniform vec2 halfStep;\n\
+        uniform vec2 msStep;\n\
+        uniform vec2 msHalfStep;\n\
         bindable uniform float weights[%d];\n\
         varying vec2 ftexcoord;\n\
         \n\
@@ -61,8 +73,8 @@ static const char *fragmentShader = "\
         }\n\
         \n\
         void main(void) {\n\
-          vec2 steppedBack = ftexcoord - halfStep;\n\
-          gl_FragColor = (sample(steppedBack) + sample(vec2(steppedBack.x + step.x, steppedBack.y)) + sample(vec2(steppedBack.x, steppedBack.y + step.y)) + sample(steppedBack + step)) / 4.0;\n\
+          vec2 steppedBack = ftexcoord - msHalfStep;\n\
+          gl_FragColor = (sample(steppedBack) + sample(vec2(steppedBack.x + msStep.x, steppedBack.y)) + sample(vec2(steppedBack.x, steppedBack.y + msStep.y)) + sample(steppedBack + msStep)) / 4.0;\n\
         }\n\
 ";
 
@@ -95,6 +107,7 @@ static int createEQ(char **ret) {
   int weightIndex = 0;
   int starti = 1;
   char *dest;
+  char *str;
   if (nnData.isRBF) {
     starti++;
     for (j = 0; j < nnData.layerSizes[1]; j++) {
@@ -120,12 +133,13 @@ static int createEQ(char **ret) {
     }
     lastLayerSize = nnData.layerSizes[i];
   }
-  char *str = malloc(len + 1);
+  str = (char *)malloc(len + 1);
   *ret = str;
   while(parts != NULL) {
+    Part *next;
     memcpy(str, parts->text, parts->len);
     str += parts->len;
-    Part *next = parts->next;
+    next = parts->next;
     free(parts->text);
     free(parts);
     parts = next;

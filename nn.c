@@ -6,6 +6,10 @@
 #include "nn.h"
 #include "main.h"
 
+#ifdef __WIN32__
+#define random() rand()
+#endif
+
 typedef struct Input Input;
 
 struct Input {
@@ -14,7 +18,7 @@ struct Input {
 };
 
 static void addInput(double x, double y, int target, Input ***eoInputs) {
-  Input *input = malloc(sizeof(Input));
+  Input *input = (Input *)malloc(sizeof(Input));
   input->input.x = x;
   input->input.y = y;
   input->input.target = 2 * target - 1;
@@ -43,7 +47,9 @@ static void readTrainingSet(char *file) {
   int target;
   Input *inputs;
   Input **eoInputs = &inputs;
+  InputVector *output;
   int count = 0;
+  int i;
   // read inputs into linked list
   while (fscanf(f, "%lf\t%lf\t%d\n", &x, &y, &target) == 3) {
     addInput(x, y, target, &eoInputs);
@@ -53,30 +59,31 @@ static void readTrainingSet(char *file) {
   // turn linked list into array
   nnData.inputs = malloc(sizeof(InputVector) * count);
   nnData.inputsSize = count;
-  InputVector *output = nnData.inputs;
+  output = nnData.inputs;
   while (inputs != NULL) {
+    Input *next;
     memcpy(output, inputs, sizeof(InputVector));
     output++;
-    Input *next = inputs->next;
+    next = inputs->next;
     free(inputs);
     inputs = next;
   }
   // copy the list into the shuffled list
   // this is in order but will be shuffled on the first learn
   nnData.shuffledInputs = malloc(sizeof(InputVector *) * count);
-  int i;
   for (i = 0; i < count; i++) {
     nnData.shuffledInputs[i] = nnData.inputs + i;
   }
 }
 
 static double activate_htan(double x) {
+  double powe;
   // 42: the answer to life, the universe, and when to stop raising e to 2 * x
   if (x > 42.0)
     return 1.0;
   if (x < -42.0)
     return -1.0;
-  double powe = exp(2.0 * x);
+  powe = exp(2.0 * x);
   return (powe - 1.0) / (powe + 1.0);
 }
 
@@ -124,6 +131,10 @@ static double derive_linear(double x) {
 double learn() {
   double mse = 0.0;
   int i, j, k, l;
+  unsigned int startLayer;
+  GLfloat *myWeights;
+  double *myMomentums;
+  double newMSE;
 #ifdef SLOW
   i = nnData.epoch % nnData.inputsSize;
   {
@@ -140,10 +151,10 @@ double learn() {
     nnData.values[1] = nnData.shuffledInputs[i]->x;
     nnData.values[2] = nnData.shuffledInputs[i]->y;
 
-    unsigned int startLayer = 1;
+    startLayer = 1;
     if (nnData.isRBF) {
-      startLayer++;
       int stride = nnData.layerSizes[0] + 1;
+      startLayer++;
       for (k = 0; k < nnData.layerSizes[1]; k++) {
         nnData.layerValues[1][k + 1] = exp(-(pow(nnData.layerValues[0][1] - nnData.weights[stride * k], 2) + pow(nnData.layerValues[0][2] - nnData.weights[stride * k + 1], 2)) / (2 * nnData.weights[stride * k + 2]));
       }
@@ -151,7 +162,7 @@ double learn() {
 
     // find outputs - forward
     // myWeights points to the weights for the current set of inputs and output
-    GLfloat *myWeights = nnData.layerWeights[startLayer - 1];
+    myWeights = nnData.layerWeights[startLayer - 1];
     for (j = startLayer; j < nnData.layers; j++) {
       for (k = 0; k < nnData.layerSizes[j]; k++) {
         for (l = 0; l < nnData.layerSizes[j - 1] + 1; l++) {
@@ -183,7 +194,7 @@ double learn() {
     // learn - forward
     // myMomentums and myWeights are the same idea
     myWeights = nnData.layerWeights[startLayer - 1];
-    double *myMomentums = nnData.layerMomentums[startLayer - 1];
+    myMomentums = nnData.layerMomentums[startLayer - 1];
     for (j = startLayer; j < nnData.layers; j++) {
       for (k = 0; k < nnData.layerSizes[j]; k++) {
         double delta = nnData.derive(nnData.layerPreActivates[j][k]) * nnData.layerErrors[j][k] * nnData.learnRate;
@@ -222,7 +233,6 @@ double learn() {
 #endif
   }
   nnData.epoch++;
-  double newMSE;
 #ifdef SLOW
   newMSE = mse;
 #else
@@ -245,16 +255,16 @@ double learn() {
 }
 
 static void cluster() {
-  shuffle();
   int i;
   int j;
   int stride = nnData.layerSizes[0] + 1;
   int *assignments = malloc(nnData.inputsSize * sizeof(int));
   int *oldAssignments = malloc(nnData.inputsSize * sizeof(int));
-  bzero(oldAssignments, nnData.inputsSize * sizeof(int));
   double *newMeans = malloc(nnData.layerSizes[0] * nnData.layerSizes[1] * sizeof(double));
   unsigned int *assigned = malloc(nnData.layerSizes[1] * sizeof(unsigned int));
   char done = 0;
+  shuffle();
+  bzero(oldAssignments, nnData.inputsSize * sizeof(int));
   // randomly select starting points
   for (i = 0; i < nnData.layerSizes[1]; i++) {
     nnData.weights[i * stride] = nnData.shuffledInputs[i]->x;
@@ -309,6 +319,7 @@ static void cluster() {
 }
 
 void initNN(int *argc, char **argv) {
+  int i;
   // read data file
   if (*argc > 2 && !strcmp(argv[1], "-f")) {
     // we got a file from the command line
@@ -334,13 +345,12 @@ void initNN(int *argc, char **argv) {
   // the number of hidden layers is specified on the command line
   // main 5 5 produces a network 2 5 5 1
   nnData.layers = *argc + 1;
-  nnData.layerSizes = malloc(nnData.layers * sizeof(unsigned int));
+  nnData.layerSizes = (unsigned int *)malloc(nnData.layers * sizeof(unsigned int));
   nnData.layerSizes[0] = 2;
   nnData.weightsSize = 0;
   nnData.valuesSize = 5; // this 5 is the final value, the inputs, and 2 biases
   nnData.preActivatesSize = 1; // this 1 is the final value
   nnData.errorsSize = 1; // the final value
-  int i;
   // populate layerSizes and determine the sizes of arrays we need to allocate
   for (i = 1; i < *argc; i++) {
     nnData.layerSizes[i] = atoi(argv[i]);
@@ -392,18 +402,18 @@ void initNN(int *argc, char **argv) {
   }
 
   // allocate our arrays
-  nnData.weights = malloc(nnData.weightsSize * sizeof(GLfloat));
-  nnData.momentums = malloc(nnData.weightsSize * sizeof(double));
-  nnData.values = malloc(nnData.valuesSize * sizeof(double));
-  nnData.preActivates = malloc(nnData.preActivatesSize * sizeof(double));
-  nnData.errors = malloc(nnData.errorsSize * sizeof(double));
+  nnData.weights = (GLfloat *)malloc(nnData.weightsSize * sizeof(GLfloat));
+  nnData.momentums = (double *)malloc(nnData.weightsSize * sizeof(double));
+  nnData.values = (double *)malloc(nnData.valuesSize * sizeof(double));
+  nnData.preActivates = (double *)malloc(nnData.preActivatesSize * sizeof(double));
+  nnData.errors = (double *)malloc(nnData.errorsSize * sizeof(double));
 
   // allocate convenience arrays
-  nnData.layerWeights = malloc(nnData.layers * sizeof(GLfloat *));
-  nnData.layerMomentums = malloc(nnData.layers * sizeof(double *));
-  nnData.layerPreActivates = malloc(nnData.layers * sizeof(double *));
-  nnData.layerValues = malloc(nnData.layers * sizeof(double *));
-  nnData.layerErrors = malloc(nnData.layers * sizeof(double *));
+  nnData.layerWeights = (GLfloat **)malloc(nnData.layers * sizeof(GLfloat *));
+  nnData.layerMomentums = (double **)malloc(nnData.layers * sizeof(double *));
+  nnData.layerPreActivates = (double **)malloc(nnData.layers * sizeof(double *));
+  nnData.layerValues = (double **)malloc(nnData.layers * sizeof(double *));
+  nnData.layerErrors = (double **)malloc(nnData.layers * sizeof(double *));
   // initialize convenience arrays
   nnData.layerWeights[0] = nnData.weights;
   nnData.layerMomentums[0] = nnData.momentums;

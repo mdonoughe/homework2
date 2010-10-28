@@ -1,6 +1,10 @@
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
 #else
+#ifdef __WIN32__
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif
 #include <GL/gl.h>
 #endif
 

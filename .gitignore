@@ -3,3 +3,11 @@ main
 doc.aux
 doc.log
 doc.pdf
+vs2010/x64
+vs2010/ipch
+vs2010/Win32
+vs2010/homework 2.opensdf
+vs2010/homework 2.sdf
+vs2010/homework 2.suo
+vs2010/homework 2.vcxproj.filters
+vs2010/homework 2.vcxproj.user

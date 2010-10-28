@@ -4,10 +4,13 @@
 #ifdef __APPLE__
 #include <GLUT/glut.h>
 #else
+#include <GL/glew.h>
 #include <GL/glut.h>
 #endif
 #ifdef TURBO
+#ifndef __WIN32__
 #include <pthread.h>
+#endif
 #endif
 
 #include "main.h"
@@ -120,19 +123,47 @@ static void idle() {
 #ifdef TURBO
 // in turbo mode we learn as fast as possible
 // this is not thread safe, but the display just gets a little weird at worst
+#ifndef __WIN32__
 static void *learnStuff(void *v) {
+#else
+static DWORD WINAPI learnStuff(LPVOID *v) {
+#endif
   while(1) {
     double mse = learn();
     printf("%d\t%f\n", nnData.epoch, mse);
   }
+#ifndef __WIN32__
   return NULL;
+#else
+  return 0;
+#endif
 }
 
 static void turboDisplay() {
   display();
   glutDisplayFunc(&display);
+#ifndef __WIN32__
   pthread_t thread;
   pthread_create(&thread, NULL, &learnStuff, NULL);
+#else
+  CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&learnStuff, NULL, 0, NULL);
+#endif
+}
+#endif
+
+#ifndef __APPLE__
+static void die(const char *msg) {
+  fprintf(stderr, "%s\n", msg);
+#ifdef __WIN32__
+  {
+    int len = strlen(msg) + 1;
+    wchar_t *wstr = (wchar_t *)malloc(len * sizeof(wchar_t));
+    mbstowcs(wstr, msg, len);
+    MessageBox(NULL, wstr, L"Homework 2", MB_OK | MB_ICONERROR | MB_TASKMODAL);
+    free(wstr);
+  }
+#endif
+  exit(1);
 }
 #endif
 
@@ -143,20 +174,42 @@ int main(int argc, char **argv) {
   glutInitWindowSize(512, 512);
   glutCreateWindow("Homework 2");
 
+#ifndef __APPLE__
+  {
+    GLenum glewError = glewInit();
+    if (glewError != GLEW_OK) {
+      die((const char *)glewGetErrorString(glewError));
+    }
+    if (!GLEW_VERSION_2_1) {
+      die("This program requires OpenGL version 2.1 or higher.");
+    }
+    if (!GLEW_EXT_bindable_uniform) {
+      die("This program requires EXT_bindable_uniform support.");
+    }
+  }
+#endif
+
   // initialize network
   initNN(&argc, argv);
 
   {
+    GLuint vshader;
+    GLuint fshader;
+    char *fshaderSource;
+    int fshaderSourceLen;
+    GLint size;
+    unsigned int pointsArraySize;
+    GLfloat *pointsArray;
+    int i;
     // build quad vertex shader
-    GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
+    vshader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vshader, 1, &quadVertexShader, NULL);
     glCompileShader(vshader);
     checkShaderError(vshader);
 
     // build quad fragment shader
-    GLuint fshader = glCreateShader(GL_FRAGMENT_SHADER);
-    char *fshaderSource;
-    int fshaderSourceLen = createFShader(&fshaderSource);
+    fshader = glCreateShader(GL_FRAGMENT_SHADER);
+    fshaderSourceLen = createFShader(&fshaderSource);
     glShaderSource(fshader, 1, (const char **)&fshaderSource, &fshaderSourceLen);
     glCompileShader(fshader);
     free(fshaderSource);
@@ -171,8 +224,8 @@ int main(int argc, char **argv) {
     glUseProgram(glData.quadProgram);
 
     // find uniforms
-    glData.halfStepUniform = glGetUniformLocation(glData.quadProgram, "halfStep");
-    glData.stepUniform = glGetUniformLocation(glData.quadProgram, "step");
+    glData.halfStepUniform = glGetUniformLocation(glData.quadProgram, "msHalfStep");
+    glData.stepUniform = glGetUniformLocation(glData.quadProgram, "msStep");
     glData.quadPositionAttribute = glGetAttribLocation(glData.quadProgram, "position");
     glData.quadTexCoordAttribute = glGetAttribLocation(glData.quadProgram, "texcoord");
     glData.weightsUniform = glGetUniformLocation(glData.quadProgram, "weights");
@@ -183,7 +236,7 @@ int main(int argc, char **argv) {
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     // build weights UBO
-    GLint size = glGetUniformBufferSizeEXT(glData.quadProgram, glData.weightsUniform);
+    size = glGetUniformBufferSizeEXT(glData.quadProgram, glData.weightsUniform);
     glGenBuffers(1, &glData.ubo);
     glBindBuffer(GL_UNIFORM_BUFFER_EXT, glData.ubo);
     glBufferData(GL_UNIFORM_BUFFER_EXT, size, NULL, GL_STREAM_DRAW);
@@ -214,9 +267,8 @@ int main(int argc, char **argv) {
     glData.pointsColorAttribute = glGetAttribLocation(glData.pointsProgram, "color");
 
     // build point VBO
-    unsigned int pointsArraySize = nnData.inputsSize * 4 * (2 + 3) * sizeof(GLfloat);
-    GLfloat *pointsArray = malloc(pointsArraySize);
-    int i;
+    pointsArraySize = nnData.inputsSize * 4 * (2 + 3) * sizeof(GLfloat);
+    pointsArray = (GLfloat *)malloc(pointsArraySize);
     for (i = 0; i < nnData.inputsSize; i++) {
       InputVector *iv = nnData.inputs + i;
       GLfloat *point = pointsArray + i * 4 * (2 + 3);
