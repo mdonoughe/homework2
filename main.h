@@ -107,6 +107,7 @@ typedef struct NNData {
   // factors
   double learnRate;
   double momentum;
+  double lastMSE;
 
   // used to select the activation function for the shader
   ActivationFunction function;

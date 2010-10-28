@@ -222,11 +222,26 @@ double learn() {
 #endif
   }
   nnData.epoch++;
+  double newMSE;
 #ifdef SLOW
-  return mse;
+  newMSE = mse;
 #else
-  return mse / nnData.inputsSize;
+  newMSE = mse / nnData.inputsSize;
 #endif
+
+  // adjust momentum
+  // http://ieeexplore.ieee.org/xpls/abs_all.jsp?arnumber=141697
+  if (nnData.lastMSE > newMSE)
+    nnData.momentum *= 1.01;
+  else
+    nnData.momentum *= 0.99;
+  if (nnData.momentum > 0.99)
+    nnData.momentum = 0.99;
+  else if (nnData.momentum < 0.5)
+    nnData.momentum = 0.5;
+
+  nnData.lastMSE = newMSE;
+  return nnData.lastMSE;
 }
 
 static void cluster() {
