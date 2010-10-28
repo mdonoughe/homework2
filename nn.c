@@ -288,7 +288,9 @@ static void cluster() {
       }
     }
     if (!done) {
-      memcpy(oldAssignments, assignments, nnData.inputsSize * sizeof(int));
+      int *t = assignments;
+      assignments = oldAssignments;
+      oldAssignments = t;
     }
   }
   // find variance
