@@ -370,7 +370,7 @@ void initNN(int *argc, char **argv) {
   //nnData.function = ACTIVATION_LOGISTIC;
   // we don't want to use activation for a single perceptron
   if (nnData.layers - (nnData.isRBF ? 1 : 0) == 2)
-    nnData.function = ACTIVATION_LINEAR;
+    nnData.function = ACTIVATION_STEP;
   // but for the C code we'll just use a virtual function call to save cycles
   switch (nnData.function) {
     case ACTIVATION_HYPERBOLIC_TANGENT:
